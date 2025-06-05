@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">Angry Queens</string>
+    <string name="n_queens_instructions">Place %1$s queens so that none threaten each other.</string>
+    <string name="hide_controls">Hide Controls</string>
+    <string name="show_controls">Show Controls</string>
+    <string name="decrease_board_size">Decrease board size by 1.</string>
+    <string name="increase_board_size">Increase board size by 1.</string>
+    <string name="resign">Resign</string>
 </resources>

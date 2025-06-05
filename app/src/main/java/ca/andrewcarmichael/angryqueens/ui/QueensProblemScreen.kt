@@ -1,6 +1,7 @@
 package ca.andrewcarmichael.angryqueens.ui
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,18 +10,43 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,6 +54,8 @@ import ca.andrewcarmichael.angryqueens.domain.model.Position
 import ca.andrewcarmichael.angryqueens.presentation.QueensProblemIntent
 import ca.andrewcarmichael.angryqueens.presentation.QueensProblemViewModel
 import ca.andrewcarmichael.angryqueens.presentation.isPositionOccupied
+import kotlinx.collections.immutable.persistentSetOf
+import ca.andrewcarmichael.angryqueens.R.string
 
 @Composable
 fun QueensProblemScreenRoot(
@@ -38,6 +66,7 @@ fun QueensProblemScreenRoot(
     QueensProblem(
         onIncreaseBoardSize = { viewModel.handleIntent(QueensProblemIntent.IncreaseBoardSize) },
         onDecreaseBoardSize = { viewModel.handleIntent(QueensProblemIntent.DecreaseBoardSize) },
+        onResign = { viewModel.handleIntent(QueensProblemIntent.Reset) },
         onPositionClick = { row, col -> viewModel.handleIntent(QueensProblemIntent.ToggleQueenPlacement(row, col)) },
         state = state,
         modifier = modifier
@@ -48,6 +77,7 @@ fun QueensProblemScreenRoot(
 private fun QueensProblem(
     onIncreaseBoardSize: () -> Unit,
     onDecreaseBoardSize: () -> Unit,
+    onResign: () -> Unit,
     onPositionClick: (Int, Int) -> Unit,
     state: QueensProblemViewModel.State,
     modifier: Modifier = Modifier,
@@ -57,11 +87,106 @@ private fun QueensProblem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        QueensProblemGameControls(
+            state = state,
+            onIncreaseBoardSize = onIncreaseBoardSize,
+            onDecreaseBoardSize = onDecreaseBoardSize,
+            onResign = onResign,
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+        )
         ChessBoard(
             onPositionClick = onPositionClick,
             state = state,
             modifier = Modifier.fillMaxWidth().padding(16.dp)
         )
+    }
+}
+
+@Composable
+private fun QueensProblemGameControls(
+    state: QueensProblemViewModel.State,
+    onIncreaseBoardSize: () -> Unit,
+    onDecreaseBoardSize: () -> Unit,
+    onResign: () -> Unit,
+    modifier: Modifier = Modifier,
+    controlsExpanded: Boolean = false,
+) {
+    var expanded by remember { mutableStateOf(controlsExpanded) }
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                text = stringResource(string.n_queens_instructions, state.remainingQueensToPlace),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            TextButton(
+                onClick = { expanded = !expanded }
+            ) {
+                val icon = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore
+                Icon(icon, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stringResource(
+                        if (expanded) string.hide_controls else string.show_controls)
+                    )
+            }
+            AnimatedVisibility(
+                visible = expanded,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        IconButton(onClick = onDecreaseBoardSize) {
+                            Icon(
+                                imageVector = Icons.Filled.Remove,
+                                contentDescription = stringResource(string.decrease_board_size),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Text(
+                            text = state.boardSize.toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        IconButton(onClick = onIncreaseBoardSize) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = stringResource(string.increase_board_size),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    Button(
+                        onClick = onResign,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                        )
+                    ) {
+                        Text(text = stringResource(string.resign))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -90,7 +215,9 @@ private fun ChessBoard(
                             isOccupied = state.isPositionOccupied(row, col),
                             isThreatened = state.threatenedPositions.contains(Position(row, col)),
                             isLightColor = isLight,
-                            modifier = Modifier.weight(1f).aspectRatio(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
                         )
                     }
                 }
@@ -109,18 +236,21 @@ private fun ChessBoardSpace(
 ) {
     Box(
         modifier = modifier.then(
-            Modifier.clickable(
-                onClickLabel = "place queen",
-                onClick = onClick,
-                role = Role.Button,
-            )
+            Modifier
+                .clickable(
+                    onClickLabel = "place queen",
+                    onClick = onClick,
+                    role = Role.Button,
+                )
                 .background(if (isLightColor) Color(0xFFECECEC) else Color(0xFF333333))
         ),
         contentAlignment = Alignment.Center,
     ) {
         if (isThreatened || isOccupied) {
             Box(
-                modifier = Modifier.fillMaxSize().background(color = Color.Red.copy(alpha = 0.3f))
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(color = Color.Red.copy(alpha = 0.3f))
             )
         }
         if (isOccupied) {
@@ -143,4 +273,119 @@ private fun ChessQueen(
         contentDescription = "Chess Queen",
         modifier = modifier,
     )
+}
+
+@Composable
+@Preview
+private fun PreviewChessBoard(
+    @PreviewParameter(GameControlsPreviewParameterProvider::class)
+    state: QueensProblemViewModel.State
+) {
+    MaterialTheme {
+        ChessBoard(
+            onPositionClick = { _, _ -> },
+            state = state,
+        )
+    }
+}
+
+private class GameControlsPreviewParameterProvider : PreviewParameterProvider<QueensProblemViewModel.State> {
+    override val values = sequenceOf(
+        // Empty Board
+        QueensProblemViewModel.State(
+            boardSize = 5,
+            isWinningPosition = false,
+            placedQueens = persistentSetOf(),
+            threatenedPositions = persistentSetOf(),
+            threatenedQueens = persistentSetOf()
+        ),
+
+        // Mid-Game with Safe Queens
+        QueensProblemViewModel.State(
+            boardSize = 6,
+            isWinningPosition = false,
+            placedQueens = persistentSetOf(
+                Position(0, 1),
+                Position(2, 3),
+                Position(4, 0)
+            ),
+            threatenedPositions = persistentSetOf(),
+            threatenedQueens = persistentSetOf()
+        ),
+
+        // Conflicts Present
+        QueensProblemViewModel.State(
+            boardSize = 5,
+            isWinningPosition = false,
+            placedQueens = persistentSetOf(
+                Position(0, 0),
+                Position(1, 1),
+                Position(2, 2)
+            ),
+            threatenedPositions = persistentSetOf(
+                Position(1, 1),
+                Position(2, 2)
+            ),
+            threatenedQueens = persistentSetOf(
+                Position(0, 0),
+                Position(1, 1)
+            )
+        ),
+
+        // Solved
+        QueensProblemViewModel.State(
+            boardSize = 4,
+            isWinningPosition = true,
+            placedQueens = persistentSetOf(
+                Position(0, 1),
+                Position(1, 3),
+                Position(2, 0),
+                Position(3, 2)
+            ),
+            threatenedPositions = persistentSetOf(),
+            threatenedQueens = persistentSetOf()
+        )
+    )
+}
+
+@Composable
+@Preview
+private fun PreviewGameControls() {
+    MaterialTheme {
+        QueensProblemGameControls(
+            state = QueensProblemViewModel.State(
+                boardSize = 5,
+                isWinningPosition = false,
+                placedQueens = persistentSetOf(),
+                threatenedPositions = persistentSetOf(),
+                threatenedQueens = persistentSetOf(),
+            ),
+            onIncreaseBoardSize = {},
+            onDecreaseBoardSize = {},
+            onResign = {},
+            modifier = Modifier,
+        )
+    }
+}
+
+
+@Composable
+@Preview
+private fun PreviewGameControlsExpanded() {
+    MaterialTheme {
+        QueensProblemGameControls(
+            state = QueensProblemViewModel.State(
+                boardSize = 5,
+                isWinningPosition = false,
+                placedQueens = persistentSetOf(),
+                threatenedPositions = persistentSetOf(),
+                threatenedQueens = persistentSetOf(),
+            ),
+            onIncreaseBoardSize = {},
+            onDecreaseBoardSize = {},
+            onResign = {},
+            modifier = Modifier,
+            controlsExpanded = true,
+        )
+    }
 }

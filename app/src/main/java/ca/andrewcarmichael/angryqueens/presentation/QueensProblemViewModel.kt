@@ -43,6 +43,7 @@ class QueensProblemViewModel(
         when (intent) {
             QueensProblemIntent.IncreaseBoardSize -> onIncreaseBoardSizeIntent()
             QueensProblemIntent.DecreaseBoardSize -> onDecreaseBoardSizeIntent()
+            QueensProblemIntent.Reset -> onReset()
             is QueensProblemIntent.ToggleQueenPlacement -> onToggleQueenPlacement(row = intent.row, col = intent.col)
         }
     }
@@ -57,6 +58,10 @@ class QueensProblemViewModel(
         viewModelScope.launch {
             queensProblemChessGame.reset((_uiStateFlow.value.boardSize - 1).coerceAtLeast(0))
         }
+    }
+
+    private fun onReset() {
+        queensProblemChessGame.reset(boardSize = _uiStateFlow.value.boardSize)
     }
 
     private fun onToggleQueenPlacement(row: Int, col: Int) {
@@ -76,7 +81,11 @@ class QueensProblemViewModel(
         val placedQueens: ImmutableSet<Position> = persistentSetOf(),
         val threatenedPositions: ImmutableSet<Position> = persistentSetOf(),
         val threatenedQueens: ImmutableSet<Position> = persistentSetOf(),
-    )
+    ) {
+        val remainingQueensToPlace: Int get() {
+            return (boardSize - placedQueens.size).coerceAtLeast(0)
+        }
+    }
 }
 
 fun QueensProblemViewModel.State.isPositionOccupied(row: Int, col: Int): Boolean {
@@ -90,6 +99,7 @@ fun QueensProblemViewModel.State.isPositionOccupied(position: Position): Boolean
 sealed interface QueensProblemIntent {
     data object IncreaseBoardSize : QueensProblemIntent
     data object DecreaseBoardSize : QueensProblemIntent
+    data object Reset : QueensProblemIntent
     data class ToggleQueenPlacement(val row: Int, val col: Int) : QueensProblemIntent
 }
 
