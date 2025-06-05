@@ -29,11 +29,12 @@ class QueensProblemViewModel(
     private fun observeChessGameChanges() {
         viewModelScope.launch {
             queensProblemChessGame.boardStateFlow.collect { boardState ->
-                _uiStateFlow.update {
+                _uiStateFlow.update { currentUiState ->
                     State(
                         boardSize = boardState.boardSize,
                         placedQueens = boardState.placedQueens.map { Position(it.row, it.col) }.toPersistentSet(),
                         threatenedPositions = boardState.threatenedPositions.map { Position(it.row, it.col) }.toPersistentSet(),
+                        showThreatenedPositions = currentUiState.showThreatenedPositions,
                         threatenedQueens = boardState.threatenedQueens.map { Position(it.row, it.col) }.toPersistentSet(),
                         chatBubbleMessage = boardState.toSnarkyMessage(),
                     )
@@ -91,20 +92,25 @@ class QueensProblemViewModel(
         when (intent) {
             QueensProblemIntent.IncreaseBoardSize -> onIncreaseBoardSizeIntent()
             QueensProblemIntent.DecreaseBoardSize -> onDecreaseBoardSizeIntent()
+            QueensProblemIntent.ToggleShowThreatenedPositions -> onToggleShowThreatenedPositions()
             QueensProblemIntent.Reset -> onReset()
             is QueensProblemIntent.ToggleQueenPlacement -> onToggleQueenPlacement(row = intent.row, col = intent.col)
         }
     }
 
     private fun onIncreaseBoardSizeIntent() {
-        viewModelScope.launch {
-            queensProblemChessGame.reset(_uiStateFlow.value.boardSize + 1)
-        }
+        queensProblemChessGame.reset(_uiStateFlow.value.boardSize + 1)
     }
 
     private fun onDecreaseBoardSizeIntent() {
-        viewModelScope.launch {
-            queensProblemChessGame.reset((_uiStateFlow.value.boardSize - 1).coerceAtLeast(0))
+        queensProblemChessGame.reset((_uiStateFlow.value.boardSize - 1).coerceAtLeast(MINIMUM_BOARD_SIZE))
+    }
+
+    private fun onToggleShowThreatenedPositions() {
+        _uiStateFlow.update { current ->
+            current.copy(
+                showThreatenedPositions = !current.showThreatenedPositions,
+            )
         }
     }
 
@@ -113,47 +119,42 @@ class QueensProblemViewModel(
     }
 
     private fun onToggleQueenPlacement(row: Int, col: Int) {
-        viewModelScope.launch {
-            val position = Position(row, col)
-            if (queensProblemChessGame.isOccupied(position))
-                queensProblemChessGame.removeQueen(position)
-            else
-                queensProblemChessGame.placeQueen(position)
-        }
+        val position = Position(row, col)
+        if (queensProblemChessGame.isOccupied(position))
+            queensProblemChessGame.removeQueen(position)
+        else
+            queensProblemChessGame.placeQueen(position)
     }
 
     @Immutable
     data class State(
         val boardSize: Int,
-        val isWinningPosition: Boolean = false,
         val placedQueens: ImmutableSet<Position> = persistentSetOf(),
+        val showThreatenedPositions: Boolean = false,
         val threatenedPositions: ImmutableSet<Position> = persistentSetOf(),
         val threatenedQueens: ImmutableSet<Position> = persistentSetOf(),
         val chatBubbleMessage: ChatBubbleMessage? = null,
-    ) {
-        val remainingQueensToPlace: Int get() {
-            return (boardSize - placedQueens.size).coerceAtLeast(0)
-        }
-    }
+    )
 
     @Immutable
     data class ChatBubbleMessage(
         val resId: Int,
         val args: List<Any> = emptyList(),
     )
+
+    companion object {
+        private const val MINIMUM_BOARD_SIZE = 4
+    }
 }
 
 fun QueensProblemViewModel.State.isPositionOccupied(row: Int, col: Int): Boolean {
     return placedQueens.contains(Position(row = row, col = col))
 }
 
-fun QueensProblemViewModel.State.isPositionOccupied(position: Position): Boolean {
-    return placedQueens.contains(position)
-}
-
 sealed interface QueensProblemIntent {
     data object IncreaseBoardSize : QueensProblemIntent
     data object DecreaseBoardSize : QueensProblemIntent
+    data object ToggleShowThreatenedPositions : QueensProblemIntent
     data object Reset : QueensProblemIntent
     data class ToggleQueenPlacement(val row: Int, val col: Int) : QueensProblemIntent
 }

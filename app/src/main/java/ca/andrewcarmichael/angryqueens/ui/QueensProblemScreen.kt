@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.with
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,11 +21,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -41,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,24 +49,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import ca.andrewcarmichael.angryqueens.R.string
 import ca.andrewcarmichael.angryqueens.domain.model.Position
 import ca.andrewcarmichael.angryqueens.presentation.QueensProblemIntent
 import ca.andrewcarmichael.angryqueens.presentation.QueensProblemViewModel
 import ca.andrewcarmichael.angryqueens.presentation.isPositionOccupied
 import kotlinx.collections.immutable.persistentSetOf
-import ca.andrewcarmichael.angryqueens.R.string
 
 @Composable
 fun QueensProblemScreenRoot(
@@ -79,6 +75,7 @@ fun QueensProblemScreenRoot(
     QueensProblem(
         onIncreaseBoardSize = { viewModel.handleIntent(QueensProblemIntent.IncreaseBoardSize) },
         onDecreaseBoardSize = { viewModel.handleIntent(QueensProblemIntent.DecreaseBoardSize) },
+        onToggleThreatenedPositions = { viewModel.handleIntent(QueensProblemIntent.ToggleShowThreatenedPositions) },
         onResign = { viewModel.handleIntent(QueensProblemIntent.Reset) },
         onPositionClick = { row, col -> viewModel.handleIntent(QueensProblemIntent.ToggleQueenPlacement(row, col)) },
         state = state,
@@ -90,6 +87,7 @@ fun QueensProblemScreenRoot(
 private fun QueensProblem(
     onIncreaseBoardSize: () -> Unit,
     onDecreaseBoardSize: () -> Unit,
+    onToggleThreatenedPositions: () -> Unit,
     onResign: () -> Unit,
     onPositionClick: (Int, Int) -> Unit,
     state: QueensProblemViewModel.State,
@@ -104,6 +102,7 @@ private fun QueensProblem(
             state = state,
             onIncreaseBoardSize = onIncreaseBoardSize,
             onDecreaseBoardSize = onDecreaseBoardSize,
+            onToggleThreatenedPositions = onToggleThreatenedPositions,
             onResign = onResign,
             modifier = Modifier
                 .fillMaxWidth()
@@ -124,6 +123,7 @@ private fun QueensProblemGameControls(
     state: QueensProblemViewModel.State,
     onIncreaseBoardSize: () -> Unit,
     onDecreaseBoardSize: () -> Unit,
+    onToggleThreatenedPositions: () -> Unit,
     onResign: () -> Unit,
     modifier: Modifier = Modifier,
     controlsExpanded: Boolean = false,
@@ -192,6 +192,20 @@ private fun QueensProblemGameControls(
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         }
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = stringResource(string.show_threatened_spaces),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Switch(
+                            checked = state.showThreatenedPositions,
+                            onCheckedChange = { onToggleThreatenedPositions() },
+                        )
                     }
                     Button(
                         onClick = onResign,
@@ -269,6 +283,7 @@ private fun ChessBoard(
 ) {
     BoxWithConstraints(
         modifier = modifier,
+        contentAlignment = Alignment.Center,
     ) {
         val maxSquareSize = minOf(maxWidth, maxHeight)
         Column(
@@ -283,7 +298,8 @@ private fun ChessBoard(
                         ChessBoardSpace(
                             onClick = { onPositionClick(row, col) },
                             isOccupied = state.isPositionOccupied(row, col),
-                            isThreatened = state.threatenedPositions.contains(Position(row, col)),
+                            isThreatened =
+                                state.showThreatenedPositions && (state.threatenedPositions.contains(Position(row, col))),
                             isLightColor = isLight,
                             modifier = Modifier
                                 .weight(1f)
@@ -316,7 +332,7 @@ private fun ChessBoardSpace(
         ),
         contentAlignment = Alignment.Center,
     ) {
-        if (isThreatened || isOccupied) {
+        if (isThreatened) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -364,7 +380,6 @@ private class GameControlsPreviewParameterProvider : PreviewParameterProvider<Qu
         // Empty Board
         QueensProblemViewModel.State(
             boardSize = 5,
-            isWinningPosition = false,
             placedQueens = persistentSetOf(),
             threatenedPositions = persistentSetOf(),
             threatenedQueens = persistentSetOf(),
@@ -373,7 +388,6 @@ private class GameControlsPreviewParameterProvider : PreviewParameterProvider<Qu
         // Mid-Game with Safe Queens
         QueensProblemViewModel.State(
             boardSize = 6,
-            isWinningPosition = false,
             placedQueens = persistentSetOf(
                 Position(0, 1),
                 Position(2, 3),
@@ -386,7 +400,6 @@ private class GameControlsPreviewParameterProvider : PreviewParameterProvider<Qu
         // Conflicts Present
         QueensProblemViewModel.State(
             boardSize = 5,
-            isWinningPosition = false,
             placedQueens = persistentSetOf(
                 Position(0, 0),
                 Position(1, 1),
@@ -405,7 +418,6 @@ private class GameControlsPreviewParameterProvider : PreviewParameterProvider<Qu
         // Solved
         QueensProblemViewModel.State(
             boardSize = 4,
-            isWinningPosition = true,
             placedQueens = persistentSetOf(
                 Position(0, 1),
                 Position(1, 3),
@@ -425,13 +437,13 @@ private fun PreviewGameControls() {
         QueensProblemGameControls(
             state = QueensProblemViewModel.State(
                 boardSize = 5,
-                isWinningPosition = false,
                 placedQueens = persistentSetOf(),
                 threatenedPositions = persistentSetOf(),
                 threatenedQueens = persistentSetOf(),
             ),
             onIncreaseBoardSize = {},
             onDecreaseBoardSize = {},
+            onToggleThreatenedPositions = {},
             onResign = {},
             modifier = Modifier,
         )
@@ -446,13 +458,13 @@ private fun PreviewGameControlsExpanded() {
         QueensProblemGameControls(
             state = QueensProblemViewModel.State(
                 boardSize = 5,
-                isWinningPosition = false,
                 placedQueens = persistentSetOf(),
                 threatenedPositions = persistentSetOf(),
                 threatenedQueens = persistentSetOf(),
             ),
             onIncreaseBoardSize = {},
             onDecreaseBoardSize = {},
+            onToggleThreatenedPositions = {},
             onResign = {},
             modifier = Modifier,
             controlsExpanded = true,
