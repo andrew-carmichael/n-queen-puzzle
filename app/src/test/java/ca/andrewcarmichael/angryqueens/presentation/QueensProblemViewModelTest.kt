@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 
+// The game logic is not overly tested here. Instead, it's completely tested in QueensProblemChessGameTest.
 class QueensProblemViewModelTest {
     private lateinit var viewModel: QueensProblemViewModel
 

@@ -13,4 +13,6 @@
     <string name="one_queen_snark">🫅 Only one queen? She\'s lonely, dramatic, and judging you.</string>
     <string name="n_queens_progress">🕊️ Smooth moves. 👑 %1$d queens down, 🌍 world peace still intact.</string>
     <string name="too_many_queens">📊 Statistically impressive. 🧠 Strategically questionable. 👑 %1$d queens on a %2$d×%2$d board is illegal in 37 countries. 🚫🌍</string>
+    <string name="place_queen">Place a queen here.</string>
+    <string name="chess_queen">Chess queen.</string>
 </resources>

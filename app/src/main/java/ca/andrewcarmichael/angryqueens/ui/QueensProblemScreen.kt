@@ -151,6 +151,7 @@ private fun QueensProblemGameControls(
                 text = message.orEmpty(),
                 modifier = Modifier.fillMaxWidth(),
             )
+            // I got a little help from ChatGPT here with the icons and the show/hide
             TextButton(
                 onClick = { expanded = !expanded }
             ) {
@@ -222,6 +223,8 @@ private fun QueensProblemGameControls(
     }
 }
 
+// ChatGPT helped me with the animation here. It didn't do a good job. I kept the use of the Surface,
+// and the transitionSpec.
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun ChatBubble(
@@ -324,7 +327,7 @@ private fun ChessBoardSpace(
         modifier = modifier.then(
             Modifier
                 .clickable(
-                    onClickLabel = "place queen",
+                    onClickLabel = stringResource(string.place_queen),
                     onClick = onClick,
                     role = Role.Button,
                 )
@@ -356,10 +359,13 @@ private fun ChessQueen(
     val imageVector = if (isLightColor) lightChessQueenImageVector else darkChessQueenImageVector
     Image(
         painter = rememberVectorPainter(imageVector),
-        contentDescription = "Chess Queen",
+        contentDescription = stringResource(string.chess_queen),
         modifier = modifier,
     )
 }
+
+//
+// Everything below here is ChatGPT
 
 @Composable
 @Preview

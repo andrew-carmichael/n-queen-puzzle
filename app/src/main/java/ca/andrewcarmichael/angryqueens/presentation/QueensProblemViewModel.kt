@@ -56,6 +56,7 @@ class QueensProblemViewModel(
                 resId = string.one_queen_snark
             )
 
+            // too may queens
             placedQueens.size > boardSize -> ChatBubbleMessage(
                 resId = string.too_many_queens,
                 args = listOf(placedQueens.size, boardSize, boardSize)
