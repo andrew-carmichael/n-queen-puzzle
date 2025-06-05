@@ -6,4 +6,10 @@
     <string name="decrease_board_size">Decrease board size by 1.</string>
     <string name="increase_board_size">Increase board size by 1.</string>
     <string name="resign">Resign</string>
+    <string name="victory_message">All hail the queen 🏆</string>
+    <string name="failure_message">Queens placed: ✅ Harmony: ❌. %1$d threats. Try diplomacy?</string>
+    <string name="n_queens_threats_detected">👑⚔️ Your queens are beefing — %1$d threats detected. It\'s a royal mess.</string>
+    <string name="one_queen_snark">🫅 Only one queen? She\'s lonely, dramatic, and judging you.</string>
+    <string name="n_queens_progress">🕊️ Smooth moves. 👑 %1$d queens down, 🌍 world peace still intact.</string>
+    <string name="too_many_queens">📊 Statistically impressive. 🧠 Strategically questionable. 👑 %1$d queens on a %2$d×%2$d board is illegal in 37 countries. 🚫🌍</string>
 </resources>

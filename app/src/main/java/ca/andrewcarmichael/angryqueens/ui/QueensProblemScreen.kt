@@ -1,7 +1,15 @@
 package ca.andrewcarmichael.angryqueens.ui
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,9 +22,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -30,15 +40,18 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.stringResource
@@ -92,12 +105,16 @@ private fun QueensProblem(
             onIncreaseBoardSize = onIncreaseBoardSize,
             onDecreaseBoardSize = onDecreaseBoardSize,
             onResign = onResign,
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
         )
         ChessBoard(
             onPositionClick = onPositionClick,
             state = state,
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         )
     }
 }
@@ -127,11 +144,12 @@ private fun QueensProblemGameControls(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                text = stringResource(string.n_queens_instructions, state.remainingQueensToPlace),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface,
+            val message = state.chatBubbleMessage?.let { chatBubbleMessage ->
+                stringResource(chatBubbleMessage.resId, *chatBubbleMessage.args.toTypedArray())
+            }
+            ChatBubble(
+                text = message.orEmpty(),
+                modifier = Modifier.fillMaxWidth(),
             )
             TextButton(
                 onClick = { expanded = !expanded }
@@ -188,6 +206,58 @@ private fun QueensProblemGameControls(
             }
         }
     }
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+private fun ChatBubble(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    var hasSeenFirstMessage by remember { mutableStateOf(false) }
+    LaunchedEffect(text) {
+        hasSeenFirstMessage = true
+    }
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = modifier.padding(start = 12.dp),
+    ) {
+        if (!hasSeenFirstMessage) {
+            ChatBubbleText(
+                text = text,
+                modifier = Modifier.padding(16.dp)
+            )
+        } else {
+            AnimatedContent(
+                targetState = text,
+                transitionSpec = {
+                    (slideInVertically { fullHeight -> fullHeight } + fadeIn()).togetherWith(
+                        slideOutVertically { fullHeight -> -fullHeight } + fadeOut())
+                },
+                label = "ChatBubbleTextTransition"
+            ) {
+                ChatBubbleText(
+                    text = it,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatBubbleText(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        modifier = modifier,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable
@@ -297,7 +367,7 @@ private class GameControlsPreviewParameterProvider : PreviewParameterProvider<Qu
             isWinningPosition = false,
             placedQueens = persistentSetOf(),
             threatenedPositions = persistentSetOf(),
-            threatenedQueens = persistentSetOf()
+            threatenedQueens = persistentSetOf(),
         ),
 
         // Mid-Game with Safe Queens
@@ -310,7 +380,7 @@ private class GameControlsPreviewParameterProvider : PreviewParameterProvider<Qu
                 Position(4, 0)
             ),
             threatenedPositions = persistentSetOf(),
-            threatenedQueens = persistentSetOf()
+            threatenedQueens = persistentSetOf(),
         ),
 
         // Conflicts Present
@@ -329,7 +399,7 @@ private class GameControlsPreviewParameterProvider : PreviewParameterProvider<Qu
             threatenedQueens = persistentSetOf(
                 Position(0, 0),
                 Position(1, 1)
-            )
+            ),
         ),
 
         // Solved
@@ -343,7 +413,7 @@ private class GameControlsPreviewParameterProvider : PreviewParameterProvider<Qu
                 Position(3, 2)
             ),
             threatenedPositions = persistentSetOf(),
-            threatenedQueens = persistentSetOf()
+            threatenedQueens = persistentSetOf(),
         )
     )
 }

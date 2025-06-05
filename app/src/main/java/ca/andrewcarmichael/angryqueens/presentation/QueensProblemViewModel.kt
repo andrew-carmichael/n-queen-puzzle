@@ -3,8 +3,10 @@ package ca.andrewcarmichael.angryqueens.presentation
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ca.andrewcarmichael.angryqueens.R.string
 import ca.andrewcarmichael.angryqueens.domain.QueensProblemChessGame
 import ca.andrewcarmichael.angryqueens.domain.model.Position
+import ca.andrewcarmichael.angryqueens.domain.model.QueensProblemChessBoardState
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentSet
@@ -32,10 +34,56 @@ class QueensProblemViewModel(
                         boardSize = boardState.boardSize,
                         placedQueens = boardState.placedQueens.map { Position(it.row, it.col) }.toPersistentSet(),
                         threatenedPositions = boardState.threatenedPositions.map { Position(it.row, it.col) }.toPersistentSet(),
-                        threatenedQueens = boardState.threatenedQueens.map { Position(it.row, it.col) }.toPersistentSet()
+                        threatenedQueens = boardState.threatenedQueens.map { Position(it.row, it.col) }.toPersistentSet(),
+                        chatBubbleMessage = boardState.toSnarkyMessage(),
                     )
                 }
             }
+        }
+    }
+
+    private fun QueensProblemChessBoardState.toSnarkyMessage(): ChatBubbleMessage? {
+        return when {
+            // game not initialized yet
+            boardSize <= 0 -> null
+
+            // no queens have been placed
+            placedQueens.isEmpty() -> ChatBubbleMessage(resId = string.n_queens_instructions, args = listOf(remainingQueensToPlace))
+
+            // placed first queen
+            placedQueens.size == 1 -> ChatBubbleMessage(
+                resId = string.one_queen_snark
+            )
+
+            placedQueens.size > boardSize -> ChatBubbleMessage(
+                resId = string.too_many_queens,
+                args = listOf(placedQueens.size, boardSize, boardSize)
+            )
+
+            // winning condition
+            remainingQueensToPlace == 0 && threatenedQueens.isEmpty() -> ChatBubbleMessage(
+                resId = string.victory_message,
+            )
+
+            // successfully placed more than one queen
+            placedQueens.isNotEmpty() && threatenedQueens.isEmpty() -> ChatBubbleMessage(
+                resId = string.n_queens_progress,
+                args = listOf(placedQueens.size, boardSize)
+            )
+
+            // placed all queens but not solved
+            remainingQueensToPlace == 0 && threatenedQueens.isNotEmpty() -> ChatBubbleMessage(
+                resId = string.failure_message,
+                args = listOf(threatenedQueens.size)
+            )
+
+            // placed some queens, threats exist
+            threatenedQueens.isNotEmpty() -> ChatBubbleMessage(
+                resId = string.n_queens_threats_detected,
+                args = listOf(threatenedQueens.size)
+            )
+
+            else -> null
         }
     }
 
@@ -81,11 +129,18 @@ class QueensProblemViewModel(
         val placedQueens: ImmutableSet<Position> = persistentSetOf(),
         val threatenedPositions: ImmutableSet<Position> = persistentSetOf(),
         val threatenedQueens: ImmutableSet<Position> = persistentSetOf(),
+        val chatBubbleMessage: ChatBubbleMessage? = null,
     ) {
         val remainingQueensToPlace: Int get() {
             return (boardSize - placedQueens.size).coerceAtLeast(0)
         }
     }
+
+    @Immutable
+    data class ChatBubbleMessage(
+        val resId: Int,
+        val args: List<Any> = emptyList(),
+    )
 }
 
 fun QueensProblemViewModel.State.isPositionOccupied(row: Int, col: Int): Boolean {
